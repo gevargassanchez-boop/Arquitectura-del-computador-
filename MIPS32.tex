@@ -1,0 +1,497 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{top=2cm, bottom=2.5cm, left=2cm, right=2cm}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% --- CONFIGURACIÓN DE COLORES ACADÉMICOS ---
+\definecolor{darkblue}{rgb}{0.0, 0.2, 0.4}
+\definecolor{codebg}{rgb}{0.97, 0.97, 0.99}
+\definecolor{commentgreen}{rgb}{0.0, 0.5, 0.0}
+\definecolor{keywordblue}{rgb}{0.0, 0.0, 0.8}
+\definecolor{stringpurple}{rgb}{0.5, 0.0, 0.5}
+
+% --- DISEÑO DE PÁGINA ---
+\titleformat{\section}{\color{darkblue}\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\color{darkblue}\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\color{darkblue}\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\color{gray}FACYT - Universidad de Carabobo}
+\rhead{\color{gray}Arquitectura del Computador - MIPS 32}
+\cfoot{\thepage}
+
+% --- CONFIGURACIÓN ESTRICTA DE LISTINGS PARA MIPS 32 ---
+\lstdefinelanguage{MIPS}{
+    morekeywords={add,addi,addu,addiu,sub,subu,and,andi,or,ori,xor,xori,nor,sll,srl,sra,lw,sw,lb,sb,lbu,lh,sh,lhu,lui,beq,bne,j,jal,jr,slt,slti,sltu,syscall,li,la,move,b,blez,bgez,blt,bgt,mul,div,mflo,mfhi},
+    morecomment=[l]{\#},
+    morestring=[b]",
+}
+
+\lstset{
+    language=MIPS,
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    keywordstyle=\color{keywordblue}\bfseries,
+    commentstyle=\color{commentgreen}\itshape,
+    stringstyle=\color{stringpurple},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    frame=single,
+    frameround=tttt,
+    framexleftmargin=4mm,
+    rulecolor=\color{gray!30},
+    keepspaces=true,
+    showstringspaces=false,
+    inputencoding=utf8,
+    extendedchars=true,
+    literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1 {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {Í}{{\'{I}}}1 {Ó}{{\'{O}}}1
+}
+
+\begin{document}
+
+% --- PORTADA ---
+\begin{center}
+    {\large \textbf{UNIVERSIDAD DE CARABOBO}} \\
+    {\large \textbf{FACULTAD DE CIENCIA Y TECNOLOGÍA (FACYT)}} \\
+    {\large \textbf{DEPARTAMENTO DE COMPUTACIÓN}} \\
+    \vspace{0.8cm}
+    {\huge \color{darkblue} \textbf{Guia de Referencia de MIPS 32}} \\
+    \vspace{0.4cm}
+    {\large \textbf{Materia: Arquitectura del Computador (4to Semestre)}} \\
+    \vspace{0.2cm}
+    \textit{Guía Exhaustiva de Código Basada en Patterson \& Hennessy (4ta Edición)}
+    \vspace{0.6cm}
+\end{center}
+
+\hrule height 1.5pt
+\vspace{0.6cm}
+
+\section{Estructura Organizativa de Registros en MIPS 32}
+MIPS utiliza una arquitectura Registro-Registro (RISC). Para codificar correctamente cualquier algoritmo, es mandatorio respetar el contrato de preservación de registros establecido por el hardware.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{cclc}
+\toprule
+\textbf{Nombre} & \textbf{Número} & \textbf{Uso en Arquitectura / Convención de Software} & \textbf{¿Se preserva en llamadas?} \\
+\midrule
+\texttt{\$zero} & 0 & Constante cableada al valor cero (0) & No modificable \\
+\texttt{\$at}   & 1 & Reservado temporalmente para el Ensamblador & No \\
+\texttt{\$v0-\$v1} & 2-3 & Valores de retorno de funciones evaluadas & No \\
+\texttt{\$a0-\$a3} & 4-7 & Parámetros de argumentos de entrada & No \\
+\texttt{\$t0-\$t7} & 8-15 & Registros temporales volátiles & No \\
+\texttt{\$s0-\$s7} & 16-23 & Registros salvados (Contexto local a proteger) & \textbf{Sí} \\
+\texttt{\$t8-\$t9} & 24-25 & Registros temporales volátiles adicionales & No \\
+\texttt{\$k0-\$k1} & 26-27 & Reservados de uso exclusivo del Núcleo del S.O. & No \\
+\texttt{\$gp}   & 28 & Puntero de área global de variables estáticas & Sí \\
+\texttt{\$sp}   & 29 & Puntero de Pila (\textit{Stack Pointer}) & \textbf{Sí} \\
+\texttt{\$fp}   & 30 & Puntero de Marco de Activación (\textit{Frame Pointer}) & Sí \\
+\texttt{\$ra}   & 31 & Dirección de Retorno de la función actual (\textit{Return Address}) & \textbf{Sí} \\
+\bottomrule
+\end{tabular}
+\caption{Mapa de Convenciones del Banco de Registros en MIPS.}
+\end{table}
+
+\section{Estructura Esquelética de un Programa en MARS}
+Todo archivo ejecutable `.asm` debe dividir los recursos de memoria lógica mediante directivas claras del compilador.
+
+\begin{lstlisting}[caption={Plantilla estructural limpia para desarrollo en laboratorios.}]
+#----------------------------------------------------------------------------------
+# AUTOR: Gabriel Vargas
+# DESCRIPCIÓN: Estructura base para el desarrollo de proyectos MIPS
+#----------------------------------------------------------------------------------
+
+.data
+    # Segmento de Memoria Estática (RAM)
+    # Declaración de variables globales, cadenas ASCII y estructuras inicializadas
+    mensaje_inicio: .asciiz "Iniciando ejecución del programa maestro...\n"
+    salto_linea:    .asciiz "\n"
+    alfa_numerico:  .byte 'M'
+    constante_pi:   .word 314159   # Representación entera fija
+
+.text
+.globl main
+
+main:
+    # --- BLOQUE INICIAL DE CONTROL ---
+    la $a0, mensaje_inicio
+    li $v0, 4
+    syscall                     # Impresión de bienvenida por consola
+    
+    # --- EJECUCIÓN ESPECÍFICA ---
+    # (Pega aquí la lógica de tu algoritmo)
+
+    # --- SALIDA REGLAMENTARIA Y LIMPIA ---
+    li $v0, 10                  # Código del sistema para terminar el hilo actual
+    syscall
+\end{lstlisting}
+
+\newpage
+
+\section{Capítulo 2.2 a 2.5: Operaciones del Núcleo Aritmético y Lógico}
+MIPS procesa tres tipos primarios de formatos de instrucción: Tipo R (Registros), Tipo I (Inmediatos) y Tipo J (Saltos). Aquí se muestran todas las variaciones posibles de manipulación aritmética y de bits.
+
+\begin{lstlisting}[caption={Demostración total de operaciones de tipo aritmético-lógico.}]
+# === 1. ARITMÉTICA DE ENTEROS ===
+add  $t0, $s0, $s1       # Suma con desbordamiento controlado: $t0 = $s0 + $s1
+addu $t1, $s0, $s1       # Suma sin signo (Ignora excepciones de overflow)
+sub  $t2, $s2, $s3       # Resta básica: $t2 = $s2 - $s3
+subu $t3, $s2, $s3       # Resta básica sin signo
+
+# === 2. MANIPULACIÓN CON CONSTANTES (INMEDIATOS) ===
+addi $t4, $s0, 256       # Suma inmediata con signo: $t4 = $s0 + 256
+addiu $t5, $s0, -40      # Suma inmediata sin signo (Extiende el signo del inmediato)
+
+# === 3. OPERACIONES DE BITS (MÁSCARAS) ===
+and  $t6, $s1, $s2       # AND lógico bit a bit
+andi $t7, $s1, 0x00FF    # AND inmediato: Extrae o aísla los 8 bits inferiores (Mascara de limpieza)
+or   $s4, $t6, $t7       # OR lógico bit a bit
+ori  $s5, $t6, 0x0F00    # OR inmediato: Enciende selectivamente grupos de bits
+xor  $t8, $s1, $s2       # XOR (OR exclusivo): Detecta diferencias de bits
+nor  $t9, $s0, $zero     # NOR contra el registro cero: Invierte todos los bits. Es el operador NOT.
+
+# === 4. MULTIPLICACIÓN Y DIVISIÓN COMPLETA (Registros Especiales lo y hi) ===
+mult $s0, $s1            # Multiplica $s0 * $s1. El resultado de 64 bits va a [hi, lo]
+mflo $t0                 # Mueve la mitad inferior del producto desde 'lo' a $t0
+mfhi $t1                 # Mueve la mitad superior del producto desde 'hi' a $t1
+
+div  $s2, $s3            # Divide $s2 / $s3. Cociente se guarda en 'lo', Residuo en 'hi'
+mflo $s4                 # $s4 = Cociente
+mfhi $s5                 # $s5 = Residuo (Operación Módulo)
+
+# === 5. DESPLAZAMIENTOS MÁQUINA (SHIFTS) ===
+sll  $t0, $s1, 3         # Shift Left Logical: Desplaza 3 bits a la izquierda (Multiplica por 8)
+srl  $t1, $s2, 2         # Shift Right Logical: Desplaza 2 bits a la derecha (Divide entre 4 sin signo)
+sra  $t2, $s2, 2         # Shift Right Arithmetic: Desplaza conservando el bit de signo superior
+\end{lstlisting}
+
+\section{Capítulo 2.3 y 2.8: Modos de Direccionamiento de Memoria}
+La memoria RAM lee y escribe usando bytes indexados de forma absoluta. Las palabras completas exigen alineación obligatoria de 4 bytes.
+
+\begin{lstlisting}[caption={Lectura y almacenamiento de estructuras de datos discretas.}]
+.data
+    vector_enteros:   .word 105, 210, 315, 420
+    vector_caracter:  .byte 'A', 'B', 'C', 'D', 'E'
+    vector_cortos:    .half 12, 24, 36, 48
+
+.text
+main_memoria:
+    la $s0, vector_enteros    # Cargar dirección base de la estructura de palabras (32 bits)
+    la $s1, vector_caracter   # Cargar dirección base de la estructura de caracteres (8 bits)
+    la $s2, vector_cortos     # Cargar dirección base de la estructura de cortos (16 bits)
+
+    # LECTURAS (De memoria RAM a Registros CPU)
+    lw  $t0, 0($s0)           # Carga vector_enteros[0] -> Desplazamiento base 0
+    lw  $t1, 4($s0)           # Carga vector_enteros[1] -> Salta 4 bytes adelante
+    lw  $t2, 12($s0)          # Carga vector_enteros[3] -> Salta 3 * 4 = 12 bytes adelante
+    
+    lbu $t3, 1($s1)           # Carga vector_caracter[1] como un byte sin signo (Carácter 'B')
+    lh  $t4, 2($s2)           # Carga vector_cortos[1] -> Salta 1 * 2 = 2 bytes adelante
+
+    # ESCRITURAS (De Registros CPU a memoria RAM)
+    addi $t0, $t0, 100        # Modificar el valor local
+    sw   $t0, 8($s0)          # Escribe el nuevo valor en vector_enteros[2] (Reemplaza el original)
+    
+    li   $t5, 'Z'
+    sb   $t5, 0($s1)          # Sobrescribe vector_caracter[0] convirtiéndolo en 'Z'
+\end{lstlisting}
+
+\newpage
+
+\section{Capítulo 2.6: Control de Flujo y Mapeo Algorítmico Base 1}
+
+\subsection{Estructuras Condicionales Compuestas (If-Else / Selectores)}
+Mapeo de la estructura lógica: \texttt{if (A < B) \{ C = A; \} else \{ C = B; \}} \\
+Asignación de registros: \texttt{A = \$s0, B = \$s1, C = \$s2}.
+\begin{lstlisting}[caption={Uso clásico de la comparación slt para bifurcaciones condicionales.}]
+    slt $t0, $s0, $s1          # Si $s0 < $s1, entonces $t0 = 1; de lo contrario $t0 = 0
+    beq $t0, $zero, ej_else    # Si $t0 == 0 (Es decir, A >= B), saltar al bloque Else
+    
+    # --- BLOQUE THEN ---
+    move $s2, $s0              # C = A
+    j fin_condicional          # Evitar la ejecución del bloque Else
+    
+ej_else:
+    # --- BLOQUE ELSE ---
+    move $s2, $s1              # C = B
+
+fin_condicional:
+\end{lstlisting}
+
+\subsection{Estructuras de Bucles de Iteración (While / For)}
+Código equivalente en C: \texttt{for (int i = 0; i < N; i++) \{ suma += vector[i]; \}} \\
+Asignación: \texttt{i = \$t0, N = \$s0, suma = \$s1, dirección de vector = \$s2}.
+\begin{lstlisting}[caption={Bucle indexado estándar con cálculo dinámico de offset.}]
+    li $t0, 0                  # Inicializar el contador de ciclos i = 0
+    li $s1, 0                  # Inicializar acumulador suma = 0
+
+ciclo_for:
+    slt $t1, $t0, $s0          # Verificar si i < N
+    beq $t1, $zero, fin_for    # Si $t1 == 0 (i >= N), romper el bucle e ir al final
+    
+    # Cálculo del desplazamiento físico dentro del bucle
+    sll $t2, $t0, 2            # $t2 = i * 4 (Cada palabra de entero ocupa 4 bytes)
+    add $t3, $t2, $s2          # $t3 = Dirección específica física calculada (Base + Desplazamiento)
+    
+    lw  $t4, 0($t3)            # Cargar dinámicamente el elemento vector[i]
+    add $s1, $s1, $t4          # suma += vector[i]
+    
+    addi $t0, $t0, 1           # Incrementar contador: i++
+    j ciclo_for                # Evaluar la siguiente iteración
+
+fin_for:
+\end{lstlisting}
+
+\subsection{Conversión Especial: Arreglos Base 1 (Algoritmos) a Base 0 (Hardware)}
+En las evaluaciones teóricas de algoritmos en FACYT se suele asumir que los índices de los arreglos inician en \textbf{1}. En MIPS, las posiciones físicas de memoria siempre inician estrictamente en \textbf{0}.
+El modelo matemático exacto para resolver este desajuste es:
+\begin{equation}
+\text{Direccion Fisica} = \text{Direccion Base} + [(\text{Indice Logico}_{\text{Base 1}} - 1) \times \text{TamaNo de la Palabra}]
+\end{equation}
+
+\begin{lstlisting}[caption={Rutina de adaptación segura para índices de pseudocódigo en Base 1.}]
+# Parámetros: $s0 = Dirección Base del Arreglo en RAM, $s1 = Índice "i" en Base 1 deseado.
+# Requerimiento: Leer el dato simulado arreglo[i]
+
+addi $t0, $s1, -1          # Ajuste matemático inmediato: Convertir a Base 0 ($t0 = i - 1)
+bltz $t0, error_limite     # Protección: Si el índice ajustado es menor a 0, abortar por violación
+
+sll  $t1, $t0, 2           # Multiplicar el índice ajustado por 4 bytes (Tamaño de palabra)
+add  $t2, $t1, $s0         # Calcular la dirección real combinada
+lw   $s2, 0($t2)           # Cargar con éxito el dato equivalente al algoritmo teórico
+
+j fin_acceso
+
+error_limite:
+    # Manejo preventivo de excepciones de desbordamiento de arreglos
+fin_acceso:
+\end{lstlisting}
+
+\newpage
+
+\section{Capítulo 2.7: Administración de Procedimientos y Gestión de la Pila}
+
+\subsection{Estructura de Funciones Anidadas No-Hoja}
+Una función No-Hoja ejecuta sub-llamadas internas mediante la instrucción `jal`. Esto causa la pérdida destructiva inmediata del contenido del registro `$ra`. Por lo tanto, la función debe crear su propio marco de pila seguro en memoria dinámica.
+
+\begin{lstlisting}[caption={Plantilla estándar obligatoria para el prólogo y epílogo del manejo de la Pila.}]
+#----------------------------------------------------------------------------------
+# FUNCIÓN EJEMPLO: Procesa datos y realiza una llamada anidada interna
+#----------------------------------------------------------------------------------
+funcion_compleja:
+    # === 1. PRÓLOGO DE LA FUNCIÓN ===
+    addi $sp, $sp, -8          # Reservamos espacio para 2 palabras continuas (8 bytes)
+    sw   $ra, 4($sp)           # Guardamos la dirección de retorno del llamador original
+    sw   $s0, 0($sp)           # Salvamos el valor previo del registro $s0
+
+    # === 2. CUERPO OPERATIVO ===
+    move $s0, $a0              # Protegemos el primer argumento de entrada en $s0
+    add  $a0, $s0, $a1         # Preparamos un parámetro modificado para la sub-función
+    
+    jal  sub_rutina_interna    # Ejecutar la llamada anidada. Al hacer esto se altera $ra de forma local.
+                               # El resultado parcial de la sub-rutina se recibe en el registro $v0
+                               
+    mul  $v0, $v0, $s0         # Multiplicar el resultado parcial por el valor inicial guardado en $s0
+
+    # === 3. EPÍLOGO DE LA FUNCIÓN ===
+    lw   $s0, 0($sp)           # Restauramos el valor original e intacto de $s0 del llamador
+    lw   $ra, 4($sp)           # Recuperamos la dirección de retorno REAL hacia main
+    addi $sp, $sp, 8           # Liberamos los 8 bytes sumando de vuelta al puntero de pila
+    
+    jr   $ra                   # Retornar de forma exitosa y segura
+\end{lstlisting}
+
+\subsection{Implementación de un Algoritmo Recursivo Puro (Factorial)}
+Demostración avanzada de recursión matemática controlada por pila.
+\begin{lstlisting}[caption={Código máquina para el cálculo recursivo de N!.}]
+# Argumento de Entrada: $a0 = Número entero N
+# Retorno: $v0 = Resultado del factorial (N!)
+factorial:
+    addi $sp, $sp, -8          # Reservar espacio en la pila para el sub-árbol
+    sw   $ra, 4($sp)           # Salvar dirección de retorno
+    sw   $a0, 0($sp)           # Salvar el valor del argumento actual N
+    
+    slti $t0, $a0, 1           # Evaluar caso base: Es N < 1?
+    beq  $t0, $zero, ir_recursio # Si N >= 1, continuar con las llamadas descendientes
+    
+    # --- CASO BASE ALCANZADO (0! = 1) ---
+    li   $v0, 1                 # Cargar el resultado neutro del inicio
+    addi $sp, $sp, 8           # Liberar pila del nivel actual sin leer memoria
+    jr   $ra                   # Iniciar el retorno hacia arriba
+    
+ir_recursio:
+    addi $a0, $a0, -1          # Decrementar el argumento de control: (N - 1)
+    jal  factorial             # Llamada recursiva interna: factorial(N-1)
+                               # Al regresar, $v0 contiene el resultado acumulado acumulado
+                               
+    lw   $a0, 0($sp)           # Restaurar el valor original de N asignado a este nivel
+    lw   $ra, 4($sp)           # Restaurar la dirección de retorno de este nivel
+    addi $sp, $sp, 8           # Liberar el espacio del marco de pila actual
+    
+    mul  $v0, $a0, $v0         # Multiplicación combinada: N * factorial(N - 1)
+    jr   $ra                   # Volver al llamador del nivel superior
+\end{lstlisting}
+
+\newpage
+
+\section{Algorítmica Avanzada para Evaluaciones y Proyectos}
+
+\subsection{Ordenamiento de Arreglos (Procedimiento Completo Sort y Swap)}
+El algoritmo de ordenamiento por intercambio (\textit{Bubble / Exchange Sort}) representa el ejemplo cumbre de un procedimiento No-Hoja con dos bucles condicionales aninados según el texto guía de Patterson \& Hennessy.
+
+\begin{lstlisting}[caption={Código máquina MIPS completo para la rutina sort y sub-rutina swap.}]
+#----------------------------------------------------------------------------------
+# PROCEDIMIENTO PRINCIPAL DE ORDENAMIENTO: sort (Función No-Hoja)
+# Argumentos: $a0 = Dirección Base del Arreglo, $a1 = Tamaño N
+# Mapeo: $s0 = i, $s1 = j, $s2 = v (dirección base), $s3 = n (tamaño)
+#----------------------------------------------------------------------------------
+sort:
+    # --- PRÓLOGO: Reservar espacio en la Pila (Stack Frame) ---
+    addi $sp, $sp, -20         # Espacio para resguardar 5 palabras (20 bytes)
+    sw   $ra, 16($sp)          # ¡VITAL! Guardar retorno a main
+    sw   $s3, 12($sp)          # Guardar contexto de $s3
+    sw   $s2, 8($sp)           # Guardar contexto de $s2
+    sw   $s1, 4($sp)           # Guardar contexto de $s1
+    sw   $s0, 0($sp)           # Guardar contexto de $s0
+
+    # --- INICIALIZACIÓN ---
+    move $s2, $a0              # Copiar dirección base de v para protegerla
+    move $s3, $a1              # Copiar el tamaño N para protegerlo
+    move $s0, $zero            # i = 0 (Inicializa el lazo externo)
+
+# === PRIMER LAZO FOR (Externo) ===
+for_externo_test:
+    slt  $t0, $s0, $s3         # i < n?
+    beq  $t0, $zero, exit_externo # Si $t0 == 0 (i >= n), ir al epílogo final
+    
+    addi $s1, $s0, -1          # Inicialización del lazo interno: j = i - 1
+
+# === SEGUNDO LAZO FOR (Interno) ===
+for_interno_test:
+    # Condición Parte 1: j >= 0?
+    slti $t0, $s1, 0           # Si j < 0 entonces $t0 = 1
+    bne  $t0, $zero, exit_interno # LÓGICA INVERTIDA: Si j < 0, sale del lazo interno
+    
+    # Condición Parte 2: v[j] > v[j + 1]?
+    sll  $t1, $s1, 2           # $t1 = j * 4 (Convertir índice a bytes)
+    add  $t2, $s2, $t1         # $t2 = v + (j * 4) -> Dirección física de v[j]
+    
+    lw   $t3, 0($t2)           # $t3 = v[j]
+    lw   $t4, 4($t2)           # $t4 = v[j + 1] (4 bytes más adelante)
+    
+    slt  $t0, $t4, $t3         # v[j + 1] < v[j]? (Equivale a v[j] > v[j+1])
+    beq  $t0, $zero, exit_interno # LÓGICA INVERTIDA: Si no es mayor, rompe el ciclo
+
+    # --- CUERPO DEL FOR INTERNO (Llamada a Swap) ---
+    move $a0, $s2              # Parámetro 1: Dirección base v
+    move $a1, $s1              # Parámetro 2: Índice j actual
+    jal  swap                  # Saltar a sub-rutina swap. Al regresar ejecuta la sig. línea
+    
+    # --- ACTUALIZACIÓN DEL FOR INTERNO ---
+    addi $s1, $s1, -1          # j--
+    j    for_interno_test      # Volver a evaluar el lazo interno
+
+exit_interno:
+    # --- ACTUALIZACIÓN DEL FOR EXTERNO ---
+    addi $s0, $s0, 1           # i++
+    j    for_externo_test      # Volver a evaluar el lazo externo
+
+exit_externo:
+    # --- EPÍLOGO: Restaurar la Pila y Retornar ---
+    lw   $s0, 0($sp)           # Restaurar $s0 original del llamador
+    lw   $s1, 4($sp)           # Restaurar $s1
+    lw   $s2, 8($sp)           # Restaurar $s2
+    lw   $s3, 12($sp)          # Restaurar $s3
+    lw   $ra, 16($sp)          # Recuperar el verdadero $ra que apunta al main
+    addi $sp, $sp, 20          # Liberar de forma exacta los 20 bytes
+    jr   $ra                   # Retornar de forma segura
+
+
+#----------------------------------------------------------------------------------
+# PROCEDIMIENTO AUXILIAR: swap (Función Hoja)
+# Argumentos: $a0 = Dirección Base v, $a1 = Índice j
+#----------------------------------------------------------------------------------
+swap:
+    sll  $t0, $a1, 2           # $t0 = j * 4
+    add  $t1, $a0, $t0         # $t1 = Dirección física de v[j]
+    
+    lw   $t2, 0($t1)           # $t2 = v[j]
+    lw   $t3, 4($t1)           # $t3 = v[j + 1]
+    
+    sw   $t3, 0($t1)           # v[j] = v[j + 1] (Escritura cruzada)
+    sw   $t2, 4($t1)           # v[j + 1] = v[j]
+    
+    jr   $ra                   # Retorna directo a la línea interna de sort
+\end{lstlisting}
+
+\subsection{Acceso y Mapeo de Matrices Bidimensionales (Filas y Columnas)}
+Para procesar una matriz estática guardada en formato lineal por filas (\textit{Row-Major Order}), la fórmula matemática para calcular el desplazamiento del elemento \texttt{Matriz[fila][columna]} es:
+\begin{equation}
+\text{Offset en Bytes} = (\text{Fila} \times \text{Numero de Columnas Totales} + \text{Columna}) \times \text{TamaNo del Dato}
+\end{equation}
+
+\begin{lstlisting}[caption={Rutina de extracción de elementos en matrices dinámicas de enteros.}]
+.data
+    # Matriz simulada de 3x4 (3 filas, 4 columnas) con enteros secuenciales
+    matriz_datos: .word  11, 12, 13, 14    # Fila 0
+                  .word  21, 22, 23, 24    # Fila 1
+                  .word  31, 32, 33, 34    # Fila 2
+    columnas_tot: .word  4                 # Constante de ancho estructural
+
+.text
+main_matrices:
+    la  $s0, matriz_datos      # Dirección base de la estructura en RAM
+    lw  $s1, columnas_tot      # $s1 = 4 (Ancho total de la matriz)
+    
+    # Coordenadas lógicas del elemento que deseamos extraer (Ej: Fila 1, Columna 3 -> Valor 24)
+    li  $s2, 1                 # Fila objetivo = 1
+    li  $s3, 3                 # Columna objetivo = 3 (Buscamos matriz_datos[1][3] -> 24)
+    
+    # Implementación de la fórmula física de direccionamiento
+    mul $t0, $s2, $s1          # $t0 = Fila objetivo * Columnas totales (1 * 4 = 4)
+    add $t0, $t0, $s3          # $t0 = Linealización de coordenadas ($t0 = 4 + 3 = 7)
+    
+    sll $t1, $t0, 2            # Convertir a bytes multiplicando por 4 ($t1 = 7 * 4 = 28 bytes de offset)
+    add $t2, $t1, $s0          # $t2 = Dirección física exacta en la RAM
+    
+    lw  $s4, 0($t2)            # $s4 = Contenido extraído de la celda deseada (Valor = 24)
+\end{lstlisting}
+
+\section{Catálogo Completo de Servicios de Interrupción (Syscalls)}
+Carga el identificador en \texttt{\$v0} y pasa los parámetros requeridos antes de activar el servicio.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{ccll}
+\toprule
+\textbf{Servicio} & \textbf{Código (\$v0)} & \textbf{Argumentos de Entrada requeridos} & \textbf{Resultado del Sistema} \\
+\midrule
+Imprimir Entero & 1 & \texttt{\$a0} = Contiene el valor numérico entero & Muestra el número en consola \\
+Imprimir Cadena & 4 & \texttt{\$a0} = Dirección base de la cadena (\texttt{.asciiz}) & Muestra el texto en consola \\
+Leer Entero & 5 & Ninguno & Captura entrada; resultado en \texttt{\$v0} \\
+Leer Cadena & 8 & \texttt{\$a0} = Dirección del Buffer, \texttt{\$a1} = Tamaño límite & Almacena el texto en memoria \\
+Asignar Memoria & 9 & \texttt{\$a0} = Cantidad de bytes requeridos & Devuelve dirección asignada en \texttt{\$v0} \\
+Terminar Programa & 10 & Ninguno & Cierra el hilo del programa de forma limpia \\
+\bottomrule
+\end{tabular}
+\caption{Servicios de llamadas de consola indispensables para laboratorios en MARS.}
+\end{table}
+
+\end{document}
