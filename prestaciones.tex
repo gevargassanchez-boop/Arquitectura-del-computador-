@@ -1,0 +1,241 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{longtable}
+
+% --- CONFIGURACIÓN DE COLORES ACADÉMICOS ---
+\definecolor{darkblue}{rgb}{0.0, 0.2, 0.4}
+
+% --- DISEÑO DE PÁGINA Y MÁRGENES ---
+\titleformat{\section}{\color{darkblue}\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\color{darkblue}\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\color{darkblue}\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+\renewcommand{\baselinestretch}{1.15}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\color{gray}FACYT - Universidad de Carabobo}
+\rhead{\color{gray}Arquitectura del Computador}
+\cfoot{\thepage}
+
+\begin{document}
+
+\section{Sección 1.4: Prestaciones y Rendimiento del Computador}
+El estudio de las prestaciones en la arquitectura de computadores define los criterios científicos para evaluar, comparar y optimizar el comportamiento de un sistema informático. A diferencia de las nociones comerciales intuitivas, el rendimiento se mide bajo métricas matemáticas rigurosas que vinculan el tiempo de ejecución del software con las restricciones del silicio.
+
+\subsection{Definición Formal de Rendimiento y Tiempo de Ejecución}
+En el ámbito computacional, la métrica primaria de prestaciones es el \textbf{Tiempo de Ejecución} o \textbf{Tiempo de Respuesta}, definido como el intervalo temporal total que transcurre entre el inicio y la finalización de una tarea (incluyendo accesos a memoria, operaciones de E/S y sobrecarga del sistema operativo).
+
+Matemáticamente, el \textbf{Rendimiento (Performance)} de una máquina se define de forma axiomática como el inverso multiplicativo de su Tiempo de Ejecución:
+
+\begin{equation}
+\text{Rendimiento}_X = \frac{1}{\text{Tiempo de Ejecucion}_X}
+\end{equation}
+
+Esta relación implica que a menor tiempo de procesamiento, mayor serán las prestaciones del hardware.
+
+\subsection{Rendimiento Relativo (Métrica de Speedup)}
+Para comparar de forma analítica el desempeño de dos computadoras distintas ($X$ e $Y$) ejecutando una carga de trabajo idéntica, se establece la relación escalar conocida como \textbf{Factor de Mejora} o \textbf{Speedup}:
+
+\begin{equation}
+\text{Speedup} = \frac{\text{Rendimiento}_X}{\text{Rendimiento}_Y} = \frac{\text{Tiempo de Ejecucion}_Y}{\text{Tiempo de Ejecucion}_X}
+\end{equation}
+
+Si el resultado de esta ecuación es mayor a $1.0$, se afirma formalmente que el Computador $X$ es ``$n$ veces más rápido'' que el Computador $Y$.
+
+\subsection{El Reloj del Procesador y sus Magnitudes Físicas}
+Los procesadores digitales están gobernados por una señal de reloj constante generada por un oscilador de cuarzo. Los pulsos de esta señal sincronizan las operaciones elementales de las compuertas lógicas en los transistores del procesador. El comportamiento físico del reloj se rige por dos variables mutuamente inversas:
+
+\begin{itemize}
+    \item \textbf{Periodo de Ciclo de Reloj ($T_c$):} Es la duración temporal infinitesimal de un único ciclo completo de la onda de reloj, medida comúnmente en nanosegundos ($1\text{ ns} = 10^{-9}\text{ s}$) o picosegundos ($1\text{ ps} = 10^{-12}\text{ s}$).
+    \item \textbf{Frecuencia de Reloj ($f$):} Es la cantidad de ciclos de onda completados por unidad de segundo. Se expresa formalmente en Hertz ($\text{Hz}$), donde un Hertz equivale estrictamente a un ciclo por segundo ($\text{ciclos}/\text{s}$). Sus múltiplos industriales son MegaHertz ($1\text{ MHz} = 10^6\text{ ciclos}/\text{s}$) o GigaHertz ($1\text{ GHz} = 10^9\text{ ciclos}/\text{s}$).
+\end{itemize}
+
+\begin{equation}
+T_c \text{ (s)} = \frac{1}{f \left(\frac{\text{ciclos}}{\text{s}}\right)} \quad \Longleftrightarrow \quad f \left(\frac{\text{ciclos}}{\text{s}}\right) = \frac{1}{T_c \text{ (s)}}
+\end{equation}
+
+\subsection{La Ecuación Fundamental del Tiempo de CPU}
+El tiempo total en que la CPU ejecuta activamente código de un programa determinado, excluyendo tiempos de espera por periféricos o hilos ajenos, se denomina \textbf{Tiempo de CPU}. Este valor se descompone analíticamente mediante el análisis dimensional de las variables físicas del sistema. 
+
+Si conocemos los ciclos totales requeridos por el programa y la frecuencia del reloj en su equivalencia fundamental de unidades ($\text{ciclos}/\text{s}$), la ecuación se expresa como:
+
+\begin{equation}
+\text{Tiempo de CPU (s)} = \frac{\text{Ciclos de Reloj de la CPU (ciclos)}}{f \left(\frac{\text{ciclos}}{\text{segundo}}\right)}
+\end{equation}
+
+Para profundizar en la interacción entre las capas del computador, se introduce la variable \textbf{IC (Instruction Count)} o conteo absoluto de instrucciones del programa, y la variable \textbf{CPI (Cycles Per Instruction)}, que representa los ciclos de reloj promedio necesarios para procesar una sola instrucción. Al incorporar la potencia analítica de las unidades de software y hardware, la ecuación final demuestra la consistencia dimensional del sistema:
+
+\begin{equation}
+\text{Tiempo de CPU (s)} = \frac{\text{IC (instrucciones)} \times \text{CPI} \left(\frac{\text{ciclos}}{\text{instruccion}}\right)}{f \left(\frac{\text{ciclos}}{\text{segundo}}\right)}
+\end{equation}
+
+\textit{Nota de validación de dimensiones:} Al multiplicar instrucciones por ($\text{ciclos}/\text{instrucción}$) en el numerador se obtienen $\text{ciclos}$ netos. Al dividir el resultado entre la frecuencia ($\text{ciclos}/\text{segundo}$), la unidad de $\text{ciclos}$ se cancela matemáticamente por la regla de la doble C, dejando el resultado final expresado correctamente en \textbf{segundos}.
+
+\subsection{Matriz de Co-dependencia de los Factores de Rendimiento}
+La optimización del rendimiento no depende exclusivamente del hardware o del software aislados, sino de la interacción simbiótica de múltiples factores técnicos detallados a continuación:
+
+\begin{table}[h!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{p{3.8cm} c c c p{6cm}}
+\toprule
+\textbf{Componente del Sistema} & \textbf{Afecta IC} & \textbf{Afecta CPI} & \textbf{Afecta $f$} & \textbf{Justificación Arquitectónica} \\
+\midrule
+\textbf{Algoritmo} & Sí & Sí & No & Determina el conteo total de operaciones lógicas primarias y la linealidad del flujo de datos. \\
+\textbf{Lenguaje de Prog.} & Sí & No & No & Los lenguajes de alto nivel abstractos aumentan el IC frente a lenguajes compilados nativos. \\
+\textbf{Compilador} & Sí & Sí & No & Traduce el código fuente a ensamblador; optimiza el orden de instrucciones y uso de registros. \\
+\textbf{ISA (Set Instrucciones)} & Sí & Sí & Sí & Define la complejidad estructural del hardware y el número de ciclos base por familia. \\
+\textbf{Microarquitectura} & No & Sí & Sí & Determina la implementación de la pila, la segmentación (pipelining) y caches. \\
+\textbf{Semiconductores} & No & No & Sí & La tecnología de litografía física (ej. 4nm vs 7nm) limita la frecuencia máxima del silicio. \\
+\bottomrule
+\end{tabular}
+\caption{Matriz de impacto de variables de software y hardware sobre el rendimiento.}
+\end{table}
+
+\subsection{CPI Efectivo en Mezclas Estadísticas de Instrucciones}
+En arquitecturas de computadores reales (multiciclo o segmentadas con penalizaciones por riesgos), las instrucciones no consumen la misma cantidad de ciclos. Las operaciones lógicas en registros son veloces, mientras que los accesos a la memoria principal (\textit{Load/Store}) demandan tiempos significativamente superiores. 
+
+Para calcular el comportamiento macroscópico de un programa real, se realiza una media ponderada que calcula el \textbf{CPI Efectivo} en función de la frecuencia relativa de aparición ($F_i$) de cada clase de instrucción $i$:
+
+\begin{equation}
+\text{CPI}_{\text{efectivo}} \left(\frac{\text{ciclos}}{\text{instruccion}}\right) = \sum_{i=1}^{n} (\text{CPI}_i \times F_i) = \frac{\text{Ciclos Totales de CPU}}{\text{IC}}
+\end{equation}
+
+Donde $F_i = \frac{\text{IC}_i}{\text{IC}}$, cumpliendo estrictamente con la restricción probabilística de normalización: $\sum_{i=1}^{n} F_i = 1.0$.
+
+\subsection{La Falacia de las Métricas MIPS y MFLOPS}
+Históricamente se han empleado métricas comerciales simplistas para catalogar la velocidad de los procesadores, siendo la más extendida el \textbf{MIPS (Millones de Instrucciones Por Segundo)}. Su expresión matemática formal es:
+
+\begin{equation}
+\text{MIPS} = \frac{\text{IC}}{\text{Tiempo de Ejecucion} \times 10^6} = \frac{f \left(\frac{\text{ciclos}}{\text{s}}\right)}{\text{CPI} \left(\frac{\text{ciclos}}{\text{instruccion}}\right) \times 10^6}
+\end{equation}
+
+El libro de Patterson \& Hennessy demuestra de forma categórica que el MIPS es una métrica \textbf{falaz e inválida} para comparar procesadores de diferentes familias debido a tres factores críticos:
+\begin{enumerate}
+    \item No toma en cuenta la capacidad de cómputo real de cada instrucción (un procesador CISC podría realizar una tarea compleja con una sola instrucción, mientras un RISC requeriría cinco instrucciones breves, arrojando este último un MIPS falsamente superior).
+    \item Puede variar de forma inversa al rendimiento real de la computadora en un mismo programa si se modifican las optimizaciones del compilador.
+    \item Desconoce la naturaleza de la mezcla de instrucciones del código ejecutado.
+\end{enumerate}
+
+Para entornos científicos con operaciones de coma flotante, se utiliza la tasa de \textbf{MFLOPS (Millones de Operaciones de Punto Flotante Por Segundo)}, la cual restringe la medición exclusivamente a instrucciones aritméticas complejas reales, eludiendo instrucciones de control de flujo o saltos.
+
+\subsection{La Ley de Amdahl y la Optimización de Prestaciones}
+Un principio inmutable en el diseño de computadoras dictamina que las mejoras de hardware implementadas en un componente específico están limitadas por la fracción de tiempo en que dicho componente es verdaderamente utilizado por el software. Este postulado se modela mediante la \textbf{Ley de Amdahl}:
+
+\begin{equation}
+\text{Tiempo de CPU}_{\text{Nuevo}} = \frac{\text{Tiempo de CPU}_{\text{Afectado}}}{\text{Factor de Mejora}} + \text{Tiempo de CPU}_{\text{No Afectado}}
+\end{equation}
+
+Definiendo la fracción de tiempo original que se beneficia de la mejora como $f_{\text{mejora}}$ y el incremento de velocidad local del módulo optimizado como $k$, la ecuación del Speedup global resultante se expresa como:
+
+\begin{equation}
+\text{Speedup}_{\text{Global}} = \frac{1}{(1 - f_{\text{mejora}}) + \frac{f_{\text{mejora}}}{k}}
+\end{equation}
+
+Este modelo formaliza la regla de diseño arquitectónico fundamental: \textit{``Optimiza el caso común y mantén el diseño balanceado''}.
+
+\newpage
+
+\subsection{Ejemplos de Cálculo Analítico (Ejercicios Resueltos Tipo Examen)}
+
+\subsubsection{Ejemplo 1: Evaluación Compleja de Dos Arquitecturas ISA}
+\textbf{Enunciado:} Una estación de trabajo de la Facultad de Ingeniería procesa un programa de análisis estructural. Se evalúan dos propuestas de diseño de hardware bajo el mismo código fuente:
+\begin{itemize}
+    \item \textbf{Diseño Alfa:} Posee una frecuencia de reloj de $4.0\text{ GHz}$ ($4.0 \times 10^9 \text{ ciclos}/\text{s}$) y su arquitectura requiere un $\text{CPI}$ promedio de $1.8$ para este programa.
+    \item \textbf{Diseño Beta:} Implementa un compilador optimizado que logra reducir el conteo de instrucciones totales a un $80\%$ en comparación con Alfa ($\text{IC}_{\text{Beta}} = 0.8 \times \text{IC}_{\text{Alfa}}$). Sin embargo, debido a los cambios estructurales, la frecuencia de reloj debió reducirse a $3.2\text{ GHz}$ ($3.2 \times 10^9 \text{ ciclos}/\text{s}$) y su $\text{CPI}$ se incrementó a $2.2$.
+\end{itemize}
+Determine analíticamente cuál diseño es más rápido y calcule el Speedup global exacto.
+
+\textbf{Resolución:}
+Planteamos la ecuación fundamental del tiempo de ejecución de la CPU para ambos sistemas en función del conteo de instrucciones base $\text{IC}_{\text{Alfa}}$ y las unidades fundamentales:
+
+\begin{equation}
+\text{Tiempo}_{\text{Alfa}} = \frac{\text{IC}_{\text{Alfa}} \times 1.8 \text{ ciclos}}{4.0 \times 10^9\text{ ciclos}/\text{s}} = \text{IC}_{\text{Alfa}} \times (4.5 \times 10^{-10})\text{ segundos}
+\end{equation}
+
+Para el Diseño Beta, incorporamos las variaciones proporucionales de las variables:
+\begin{equation}
+\text{Tiempo}_{\text{Beta}} = \frac{(0.8 \times \text{IC}_{\text{Alfa}}) \times 2.2 \text{ ciclos}}{3.2 \times 10^9\text{ de ciclos}/\text{s}}
+\end{equation}
+\begin{equation}
+\text{Tiempo}_{\text{Beta}} = \frac{\text{IC}_{\text{Alfa}} \times 1.76 \text{ ciclos}}{3.2 \times 10^9\text{ ciclos}/\text{s}} = \text{IC}_{\text{Alfa}} \times (5.5 \times 10^{-10})\text{ segundos}
+\end{equation}
+
+Procedemos a evaluar la métrica de Speedup relativo dividiendo el tiempo de ejecución del sistema más lento entre el más rápido:
+\begin{equation}
+\text{Speedup} = \frac{\text{Tiempo}_{\text{Beta}}}{\text{Tiempo}_{\text{Alfa}}} = \frac{\text{IC}_{\text{Alfa}} \times 5.5 \times 10^{-10}\text{ s}}{\text{IC}_{\text{Alfa}} \times 4.5 \times 10^{-10}\text{ s}} = \frac{5.5}{4.5} \approx 1.222
+\end{equation}
+
+\textbf{Conclusión Analítica:} El Diseño Alfa es más rápido que el Diseño Beta por un factor exacto de \textbf{$1.22$ (un $22.2\%$ superior)}. A pesar de que el Diseño Beta ejecuta un $20\%$ menos instrucciones, la degradación simultánea en su frecuencia de reloj y el incremento en los ciclos por instrucción neutralizaron la optimización del compilador.
+
+\vspace{0.6cm}
+
+\subsubsection{Ejemplo 2: Mezcla de Instrucciones y Optimización de Compilación}
+\textbf{Enunciado:} Un procesador MIPS implementa tres clases funcionales de instrucciones con sus respectivos CPI de diseño: Clase A ($\text{CPI} = 1$), Clase B ($\text{CPI} = 2$) y Clase C ($\text{CPI} = 3$). Dos compiladores experimentales generan código máquina para un mismo algoritmo con las siguientes distribuciones absolutas:
+\begin{itemize}
+    \item \textbf{Compilador 1:} Genera $5 \times 10^6$ inst. de Clase A, $2 \times 10^6$ de Clase B y $3 \times 10^6$ de Clase C.
+    \item \textbf{Compilador 2:} Genera $10 \times 10^6$ inst. de Clase A, $1 \times 10^6$ de Clase B y $1 \times 10^6$ de Clase C.
+\end{itemize}
+Calcule el CPI efectivo para cada caso y dictamine cuál compilador produce un rendimiento óptimo de la CPU.
+
+\textbf{Resolución Compilador 1:}
+\begin{equation}
+\text{IC}_{\text{Total1}} = (5 + 2 + 3) \times 10^6 = 10 \times 10^6 \text{ instrucciones}
+\end{equation}
+\begin{align*}
+\text{Ciclos}_{\text{Comp1}} &= \sum (\text{IC}_i \times \text{CPI}_i) \\
+\text{Ciclos}_{\text{Comp1}} &= (5\times 10^6 \times 1) + (2\times 10^6 \times 2) + (3\times 10^6 \times 3) \\
+\text{Ciclos}_{\text{Comp1}} &= (5 + 4 + 9) \times 10^6 = 18 \times 10^6 \text{ ciclos de reloj}
+\end{align>*}
+\begin{equation}
+\text{CPI}_{\text{Efectivo1}} = \frac{\text{Ciclos}_{\text{Comp1}}}{\text{IC}_{\text{Total1}}} = \frac{18 \times 10^6 \text{ ciclos}}{10 \times 10^6 \text{ inst.}} = 1.80 \left(\frac{\text{ciclos}}{\text{instruccion}}\right)
+\end{equation}
+
+\textbf{Resolución Compilador 2:}
+\begin{equation}
+\text{IC}_{\text{Total2}} = (10 + 1 + 1) \times 10^6 = 12 \times 10^6 \text{ instrucciones}
+\end{equation}
+\begin{align*}
+\text{Ciclos}_{\text{Comp2}} &= (10\times 10^6 \times 1) + (1\times 10^6 \times 2) + (1\times 10^6 \times 3) \\
+\text{Ciclos}_{\text{Comp2}} &= (10 + 2 + 3) \times 10^6 = 15 \times 10^6 \text{ ciclos de reloj}
+\end{align>*}
+\begin{equation}
+\text{CPI}_{\text{Efectivo2}} = \frac{\text{Ciclos}_{\text{Comp2}}}{\text{IC}_{\text{Total2}}} = \frac{15 \times 10^6 \text{ ciclos}}{12 \times 10^6 \text{ inst.}} = 1.25 \left(\frac{\text{ciclos}}{\text{instruccion}}\right)
+\end{equation}
+
+\textbf{Conclusión Analítica:} Evaluando los ciclos absolutos de reloj, el \textbf{Compilador 2 es superior} debido a que requiere menos ciclos totales de reloj ($15 \times 10^6$ vs $18 \times 10^6$) para ejecutar la misma tarea lógica, traduciéndose en un menor tiempo de procesamiento efectivo. Este ejercicio ilustra una paradoja clásica de la arquitectura: el Compilador 2 incrementó el conteo de instrucciones totales ($\text{IC}$ aumentó de 10 a 12 millones), pero redujo drásticamente su CPI efectivo, logrando una ejecución global netamente más veloz.
+
+\vspace{0.6cm}
+
+\subsubsection{Ejemplo 3: Aplicación Teórica de la Ley de Amdahl}
+\textbf{Enunciado:} El equipo de diseño de un procesador industrial busca optimizar el pipeline matemático. Se analiza implementar un coprocesador vectorial de punto flotante por hardware que ejecuta cálculos aritméticos 10 veces más rápido que la lógica actual ($k = 10$). Mediante análisis de trazas de perfiles del software, se determina que las instrucciones de punto flotante representan el $40\%$ del tiempo total de CPU del programa de control ($f_{\text{mejora}} = 0.40$). Calcule el Speedup global real del sistema tras la integración física del componente.
+
+\textbf{Resolución:}
+Aplicamos de forma directa la ecuación escalar de la Ley de Amdahl:
+\begin{equation}
+\text{Speedup}_{\text{Global}} = \frac{1}{(1 - f_{\text{mejora}}) + \frac{f_{\text{mejora}}}{k}}
+\end{equation}
+
+Sustituyendo los parámetros operacionales provistos por el enunciado técnico ($f_{\text{mejora}} = 0.40$ y $k = 10$):
+\begin{equation}
+\text{Speedup}_{\text{Global}} = \frac{1}{(1 - 0.40) + \frac{0.40}{10}} = \frac{1}{0.60 + 0.04}
+\end{equation}
+\begin{equation}
+\text{Speedup}_{\text{Global}} = \frac{1}{0.64} \approx 1.5625
+\end{equation}
+
+\textbf{Conclusión Analítica:} La integración del nuevo hardware vectorial proporciona un factor de incremento de velocidad global exacto de \textbf{$1.56$ (un $56.25\%$ de ganancia en las prestaciones generales del procesador)}. Este ejercicio demuestra cuantitativamente los límites impuestos por la Ley de Amdahl: a pesar de haber acelerado un componente local de manera masiva (un $1000\%$ de rendimiento en coma flotante), el impacto global se vio estrictamente acotado por el $60\%$ del programa que continuó ejecutándose de forma convencional secuencial.
+
+\end{document}
