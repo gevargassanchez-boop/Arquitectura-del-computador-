@@ -1,0 +1,187 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{top=3cm, bottom=3cm, left=3cm, right=3cm}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\begin{document}
+
+% ==========================================
+%                  PORTADA
+% ==========================================
+\begin{titlepage}
+    \centering
+    {\bfseries\LARGE Universidad de Carabobo}\\
+    [0.4cm]
+    {\bfseries\Large Facultad de Ciencias y Tecnología (FACYT)}\\
+    [0.4cm]
+    {\large Departamento de Computación \\ Asignatura: Arquitectura del Computador \\ 4to Semestre}\\
+    \vfill
+    {\Huge \bfseries PRACTICA DE LABORATORIO 1}\\
+    [0.6cm]
+    {\Large \bfseries Estudio Comparativo de Paridad:\\ Implementaciones Iterativas y Recursivas en MIPS32}\\
+    \vfill
+    
+    % Bloque alineado en paralelo para Profesor y Estudiante
+    \noindent
+    \begin{minipage}[t]{0.45\textwidth}
+        \large
+        \textbf{Profesor:}\\
+        José Canache
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.45\textwidth}
+        \large
+        \begin{flushright}
+            \textbf{Estudiante:}\\
+            Gabriel Vargas\\
+            \textbf{C.I.:} 32.035.567
+        \end{flushright}
+    \end{minipage}
+    
+    \vfill
+    {\large Valencia, Junio de 2026}
+\end{titlepage}
+
+\newpage
+
+% ==========================================
+%          INTRODUCCIÓN Y OBJETIVOS
+% ==========================================
+\section{Introducción y Objetivos}
+
+El análisis del rendimiento algorítmico a bajo nivel constituye una de las bases fundamentales en el diseño de sistemas y la arquitectura de computadores. Los lenguajes de alto nivel ocultan la mecánica operativa del hardware, abstrayendo elementos críticos como la gestión de memoria y el direccionamiento físico. Esta práctica aborda la evaluación de dos paradigmas de control (iterativo y recursivo) mediante el conjunto de instrucciones MIPS32, utilizando el entorno de simulación MARS.
+
+El propósito central es determinar la paridad de un número entero positivo $n$ bajo la especificación formal provista por la cátedra. A través de este problema elemental, se evalúan conceptos avanzados como el manejo de subrutinas, las convenciones de resguardo de registros y la administración manual del espacio de memoria dinámica en el segmento de pila del procesador.
+
+\subsection{Objetivos Específicos}
+\begin{itemize}
+    \item Familiarizarse con la sintaxis, directivas de ensamblador y el repertorio de instrucciones de la arquitectura MIPS32.
+    \item Comprender e implementar el mecanismo de subrutinas a través de instrucciones de salto y enlace (\texttt{jal}) y salto por registro (\texttt{jr}).
+    \item Diseñar y gestionar manualmente el bloque de activación (\textit{Stack Frame}) a través del registro de puntero de pila (\texttt{\$sp}).
+    \item Contrastar cuantitativa y cualitativamente las diferencias de consumo de recursos (ciclos de ejecución, accesos a memoria y uso de registros) entre un enfoque puramente iterativo y uno recursivo.
+\end{itemize}
+
+\newpage
+
+% ==========================================
+%          CUESTIONARIO DESARROLLADO
+% ==========================================
+\section{Respuestas al Cuestionario del Informe}
+
+\subsection{Implementación de la recursividad en MIPS32 y el rol de la pila (\texttt{\$sp})}
+Dado que la arquitectura RISC de MIPS32 no posee instrucciones de alto nivel dedicadas al manejo nativo de funciones recursivas, esta estructura de control debe implementarse de forma explícita por el programador combinando saltos incondicionales con la manipulación de la pila del sistema.
+
+La instrucción clave es \texttt{jal} (\textit{Jump and Link}). Al invocarse esta instrucción, el procesador realiza dos acciones de hardware de forma atómica: carga la dirección de la subrutina en el Contador de Programa (\texttt{PC}) y almacena automáticamente la dirección de retorno (\texttt{PC + 4}) en el registro \texttt{\$ra} (\textit{Return Address}). Cuando una función se llama a sí misma de manera recursiva, cada nueva ejecución de \texttt{jal} sobreescribe el valor previo de \texttt{\$ra}, perdiendo irremediablemente el camino de regreso.
+
+Para evitar la pérdida del flujo de retorno hacia las funciones precedentes, se emplea el registro \texttt{\$sp} (\textit{Stack Pointer}). El puntero de pila delimita un área de memoria dinámica (\textit{Stack Segment}) que crece hacia direcciones descendentes. Cada nivel de llamada activa un marco de activación (\textit{Stack Frame}) donde se resguardan los estados locales de ese nivel específico a través de instrucciones \texttt{sw} (\textit{Store Word}), almacenando tanto la dirección de retorno \texttt{\$ra} como el argumento actual de trabajo \texttt{\$a0}. Al alcanzarse el caso base, el programa desapila los datos en orden inverso mediante \texttt{lw} (\textit{Load Word}) y restaura el espacio sumando el desplazamiento al puntero, permitiendo que la instrucción \texttt{jr \$ra} devuelva el flujo ordenadamente a la instancia superior.
+
+\subsection{Riesgos de desbordamiento de pila (\textit{Stack Overflow}) y estrategias de mitigación}
+El riesgo crítico inherente a la recursividad en entornos de bajo nivel es el desbordamiento de la pila o \textit{Stack Overflow}. En la arquitectura MIPS32, la pila posee límites definidos por el mapa de memoria del sistema. Cada nivel de recursión consume memoria de manera estrictamente lineal. Para un marco de activación estándar de $8$ bytes (necesario para resguardar dos palabras de 32 bits), una entrada $n$ demandará $8 \times n$ bytes en la memoria RAM.
+
+Si el valor de entrada $n$ es excesivamente grande, o si ocurre una falla lógica que impida alcanzar la condición del caso base, la pila continuará expandiéndose indefinidamente hacia direcciones bajas de memoria hasta colisionar con el segmento de datos dinámicos (\textit{Heap}) o sobrepasar los límites de asignación del sistema operativo del simulador, resultando en una excepción por direccionamiento inválido y el aborto de la aplicación.
+
+\subsubsection{Mitigación del riesgo}
+Para mitigar este fallo, se deben aplicar las siguientes directrices de diseño a nivel de software y hardware:
+\begin{enumerate}
+    \item \textbf{Validación Rigurosa de Entrada:} Implementar filtros condicionales al inicio del programa principal (\textit{main}) para verificar que el argumento cumpla con las precondiciones matemáticas, validando que no sea negativo y estableciendo un techo máximo tolerable para el argumento de entrada.
+    \item \textbf{Garantía de Convergencia del Caso Base:} Asegurar que todas las bifurcaciones lógicas decrezcan de forma estricta hacia la condición de parada. En este ejercicio, decrementar uniformemente el argumento asegura alcanzar la condición cero que detiene la recursión.
+\end{enumerate}
+
+\subsection{Diferencias operativas en el uso de memoria y registros}
+La discrepancia entre los enfoques iterativo y recursivo en MIPS32 representa el balance clásico entre la eficiencia de hardware y la abstracción algorítmica.
+
+\subsubsection{Gestión de Memoria RAM}
+La solución iterativa exhibe una eficiencia óptima de espacio, operando con una complejidad espacial de $O(1)$. No requiere modificar el registro \texttt{\$sp} ni interactuar con la memoria volátil durante el procesamiento del bucle, puesto que todo el control ocurre internamente en los registros del procesador. Por el contrario, la solución recursiva opera con una complejidad espacial de $O(n)$, donde cada paso intermedio incurre en retardos físicos de acceso a memoria debido al tráfico constante generado por las instrucciones de lectura y escritura en la pila (\texttt{sw} y \texttt{lw}).
+
+\subsubsection{Gestión de Registros}
+En la solución iterativa, los registros mantienen sus estados de manera continua a lo largo de las iteraciones del lazo, lo que minimiza drásticamente los accesos al bus de datos. En la solución recursiva, la convención de MIPS obliga a tratar los registros de argumentos y valores temporales como volátiles a través de las llamadas. Por lo tanto, el procesador se ve forzado a realizar un vaciado (\textit{register spilling}) hacia la memoria RAM para salvaguardar la coherencia de los datos entre llamadas anidadas.
+
+\begin{table}[h!]
+\centering
+\caption{Cuadro Comparativo de Recursos: Iterativo vs. Recursivo en MIPS32}
+\vspace{0.3cm}
+\begin{tabular}{l p{5.5cm} p{5.5cm}}
+\toprule
+\textbf{Criterio de Evaluación} & \textbf{Implementación Iterativa} & \textbf{Implementación Recursiva} \\
+\midrule
+\textbf{Complejidad Espacial} & $O(1)$ -- Constante. No consume espacio adicional. & $O(n)$ -- Lineal. Crece proporcionalmente al argumento $n$. \\
+\midrule
+\textbf{Uso del Puntero \texttt{\$sp}} & Nulo. El registro \texttt{\$sp} permanece inalterado. & Intensivo. Se modifica dos veces por cada llamada recursiva. \\
+\midrule
+\textbf{Tráfico en el Bus de Datos} & Mínimo. Limitado a la carga inicial de variables. & Crítico. Multiplicidad de operaciones \texttt{sw} y \texttt{lw} en la RAM. \\
+\midrule
+\textbf{Ciclos de Reloj por Etapa} & Muy bajo. Saltos directos cortos mediante \texttt{j}. & Alto. Penalizaciones por llamadas \texttt{jal}, \texttt{jr} y accesos a memoria. \\
+\midrule
+\textbf{Ciclo de Vida de Registros} & Persistente dentro del contexto local del ciclo. & Volátil. Obliga al resguardo continuo en el \textit{Stack Frame}. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Diferencias entre ejemplos académicos del libro de texto y un programa operativo en MARS}
+Los textos teóricos de referencia, tales como el de David A. Patterson y John L. Hennessy (\textit{Estructura y diseño de computadores: la interfaz hardware/software}), poseen un enfoque netamente didáctico y pedagógico. Su prioridad es aislar el repertorio de instrucciones para explicar la lógica pura del procesamiento aritmético o de control, omitiendo los componentes infraestructurales requeridos para la ejecución real en un computador. Al contrastar los fragmentos provistos en la literatura teórica con los códigos operativos reales desarrollados para MARS, se identifican divergencias estructurales críticas.
+
+\begin{table}[h!]
+\centering
+\caption{Divergencias Estructurales: Modelos de Libros vs. Código Operativo}
+\vspace{0.3cm}
+\begin{tabular}{l p{5.5cm} p{5.5cm}}
+\toprule
+\textbf{Componente} & \textbf{Ejemplos de Libros (Teoría)} & \textbf{Código Fuente Operativo (Práctica)} \\
+\midrule
+\textbf{Segmentación} & Omitida. Se listan secuencias directas de instrucciones aisladas. & Obligatoria. División en bloques jerárquicos \texttt{.data} y \texttt{.text}. \\
+\midrule
+\textbf{Gestión de Datos} & Abstracta. Se asume que los valores ya residen en los registros. & Explícita. Declaración de directivas como \texttt{.word} y \texttt{.asciiz} en memoria estática. \\
+\midrule
+\textbf{Punto de Entrada} & Indefinido. La ejecución inicia implícitamente en la primera línea expuesta. & Formalizado. Uso estricto de la etiqueta global \texttt{main} y la declaración de inicio. \\
+\midrule
+\textbf{Finalización} & Inexistente o mediante retornos vacíos de subrutina. & Explícita. Llamadas al sistema operativo mediante servicios específicos (\texttt{li \$v0, 10; syscall}). \\
+\midrule
+\textbf{Interactividad} & Ignorada por completo para evitar ruido visual en las explicaciones. & Presente. Empleo de llamadas al sistema (\texttt{syscall}) para la salida de texto en consola. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La mayor diferencia radica en la finalización limpia. Un ejemplo de libro simplemente asume que el código deja de ejecutarse al terminar la función. En un entorno real como MARS, si se omitiera el bloque de finalización por llamada al sistema (servicio 10), el procesador continuaría decodificando de forma secuencial las posiciones de memoria subsiguientes, interpretando datos estáticos o instrucciones vacías (\texttt{nop}) como código de operación válido, desencadenando fallos catastróficos de ejecución.
+
+\subsection{Tutorial de ejecución paso a paso en el entorno MARS}
+Para validar y analizar los algoritmos desarrollados de forma externa, el entorno de desarrollo MARS proporciona herramientas de depuración a bajo nivel. A continuación, se estructura el protocolo sistemático para la ejecución controlada de los programas:
+
+\begin{enumerate}
+    \item \textbf{Carga y Ensamblado del Archivo:}
+    Abrir el entorno MARS, cargar el archivo con extensión \texttt{.asm} y ejecutar el proceso de ensamblado presionando el icono del martillo y la llave inglesa (o la tecla de acceso rápido \textbf{F3}). Este paso convierte el código fuente en lenguaje máquina y cambia la interfaz a la pestaña \textit{Execute}.
+    
+    \item \textbf{Reconocimiento del Segmento de Texto y Datos:}
+    En la vista central se desplegará el \textit{Text Segment}, donde se visualizan cuatro columnas esenciales: la dirección física de memoria (en formato hexadecimal, ej. \texttt{0x00400000}), el código de máquina correspondiente en hexadecimal, la instrucción en lenguaje ensamblador limpio y la línea de código fuente original escrita por el programador. En la sección inferior, la pestaña \textit{Data Segment} permite monitorear los cambios de las variables almacenadas en la memoria estática (como la constante \texttt{n}).
+    
+    \item \textbf{Ejecución Controlada Paso a Paso (\textit{Single-Stepping}):}
+    En lugar de ejecutar todo el programa de manera continua con el botón de flecha verde, se debe presionar el icono de la flecha con el número uno o pulsar la tecla \textbf{F7} (\textit{Step}). Cada pulsación ejecuta una única instrucción de hardware, permitiendo observar la sincronía entre el flujo de control y las variaciones internas del procesador.
+    
+    \item \textbf{Monitoreo en Tiempo Real de Registros y la Pila:}
+    Durante el paso a paso del archivo recursivo, se debe prestar atención al panel lateral derecho (\textit{Registers}). Al ejecutar instrucciones de reserva de espacio, se observará cómo el registro \texttt{\$sp} disminuye su valor desde su dirección base inicial (\texttt{0x7ffffffc}), reflejando el crecimiento físico de la pila. Asimismo, el registro \texttt{\$v0} cambiará dinámicamente entre $0$ y $1$ a medida que los retornos evalúan la expresión aritmética de alternancia de paridad.
+\end{enumerate}
+
+\subsection{Justificación de la elección del enfoque según criterios de eficiencia y claridad}
+Para la resolución del problema de determinación de paridad en la arquitectura MIPS32, la elección óptima e inapelable desde la perspectiva de la ingeniería de hardware es el **enfoque iterativo**.
+
+\subsubsection{Criterio de Eficiencia}
+La implementación iterativa optimiza drásticamente el uso de los componentes físicos del computador. Al confinarse en el banco de registros, elimina por completo las penalizaciones por latencia de memoria asociadas al acceso de la memoria caché y la memoria RAM principal. Además, reduce el conteo total de instrucciones ejecutadas por el procesador, evitando la sobrecarga estructural impuesta por la creación de marcos de activación, saltos remotos y operaciones de restauración de contexto de registros. El ahorro en ciclos de reloj y en ancho de banda del bus de datos es masivo en comparación con la recursividad cuando $n$ escala.
+
+\subsubsection{Criterio de Claridad}
+Si bien a nivel lógico y matemático la recursividad ofrece una traducción casi literal de la fórmula dada, en el lenguaje ensamblador MIPS32 esta elegancia se desvanece debido a la complejidad de la gestión manual de la pila. El enfoque iterativo estructurado mediante un ciclo condicional limpio (\texttt{for}) resulta significativamente más legible, directo, fácil de documentar y menos propenso a errores humanos críticos como la omisión accidental del resguardo del registro de retorno \texttt{\$ra}.
+
+\subsection{Análisis y Discusión de los Resultados}
+Las pruebas experimentales computadas dentro del simulador MARS arrojaron resultados idénticos para ambos algoritmos bajo valores controlados de entrada, validando la consistencia matemática de ambas soluciones. Para un valor de prueba de $n = 2$, ambos programas imprimieron con éxito en la consola el valor \texttt{0}, confirmando correctamente que el número evaluado es de paridad par.
+
+Sin embargo, el análisis del comportamiento interno reveló diferencias fundamentales durante el paso a paso:
+\begin{itemize}
+    \item El programa iterativo completó el cálculo recorriendo el bucle exactamente dos veces mediante saltos locales (\texttt{j}), manteniendo constante el uso de los recursos de hardware y sin alterar la memoria externa.
+    \item El programa recursivo generó un total de tres marcos de activación en la pila antes de poder resolver el problema. Se observó cómo el puntero de pila \texttt{\$sp} decreció sucesivamente pasando por los valores \texttt{0x7ffffff8}, \texttt{0x7ffffff0} y \texttt{0x7fffffe8} para almacenar los contextos de $n=2$, $n=1$ y el caso base $n=0$, respectivamente. Solo tras alcanzar el caso base, la paridad comenzó a propagarse de vuelta hacia las instancias superiores alternando el resultado en \texttt{\$v0}, evidenciando de forma empírica el elevado costo que la recursividad impone sobre el subsistema de memoria.
+\end{itemize}
+
+El desarrollo práctico permitió verificar que la optimización a bajo nivel exige priorizar arquitecturas algorítmicas que minimicen el tráfico en el bus de datos. Se concluye que el paradigma iterativo representa la solución más balanceada y de mayor rendimiento para sistemas de cómputo con recursos restringidos o de propósito general gobernados por el conjunto de instrucciones MIPS32.
+
+\end{document}
