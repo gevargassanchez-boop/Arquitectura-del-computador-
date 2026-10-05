@@ -1,0 +1,286 @@
+\documentclass[12pt, letterpaper]{article}
+
+% --- PAQUETES DE CONFIGURACIÓN Y ESTILO ---
+\usepackage[utf8]{inputenc}
+\usepackage[spanish, es-tabla]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{microtype}
+
+% Configuración de enlaces hipertexto
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!80!black,
+    citecolor=blue!80!black,
+    urlcolor=blue!80!black
+}
+
+% Configuración para bloques de código MIPS
+\lstdefinelanguage{MIPS}{
+    keywords={lw, sw, li, la, beqz, beq, jal, jr, syscall, addiu, ori, lui},
+    keywordstyle=\color{blue}\bfseries,
+    comments=[l]{\#},
+    commentstyle=\color{green!60!black}\itshape,
+    strings=[b]",
+    stringstyle=\color{orange}
+}
+
+\lstset{
+    language=MIPS,
+    basicstyle=\ttfamily\small,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    frame=single,
+    breaklines=true,
+    backgroundcolor=\color{gray!5}
+}
+
+% Estilo de encabezados y pies de página
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small Práctica de Laboratorio 3 -- Arquitectura del Computador}
+\lhead{\small FACYT -- Universidad de Carabobo}
+\rfoot{\thepage}
+
+% --- INICIO DEL DOCUMENTO ---
+\begin{document}
+
+% =====================================================================
+% PORTADA INSTITUCIONAL
+% =====================================================================
+\begin{titlepage}
+    \centering
+    {\bfseries\Large UNIVERSIDAD DE CARABOBO\par}
+    \vspace{0.3cm}
+    {\bfseries\large FACULTAD DE CIENCIAS Y TECNOLOGÍA\par}
+    {\large DEPARTAMENTO DE COMPUTACIÓN\par}
+    {\large ARQUITECTURA DEL COMPUTADOR\par}
+    
+    \vspace{2.5cm}
+    
+    \rule{\linewidth}{0.5mm} \\[0.4cm]
+    {\huge\bfseries Práctica de Laboratorio 3 \\[0.3cm]
+    \Large Entradas y Salidas Mapeadas en Memoria (MMIO) y Programación en Ensamblador MIPS32 \par}
+    \rule{\linewidth}{0.5mm} \\[1.5cm]
+    
+    \vfill
+    
+    \begin{minipage}{0.48\textwidth}
+        \begin{flushleft} \large
+            \textbf{Estudiante:}\\
+            Gabriel Vargas\\
+            C.I.: 32.035.567
+        \end{flushleft}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \begin{flushright} \large
+            \textbf{Profesor:}\\
+            Prof. José Canache
+        \end{flushright}
+    \end{minipage}
+    
+    \vfill
+    \vspace{2cm}
+    
+    {\large Valencia, Octubre 2026 \par}
+\end{titlepage}
+
+\newpage
+
+% =====================================================================
+% DESARROLLO DEL INFORME
+% =====================================================================
+\section{Respuestas al Cuestionario del Informe}
+
+\subsection*{Pregunta 1}
+\textbf{1. Explique cómo se organiza la memoria cuando un sistema utiliza \textit{memory-mapped I/O}. ¿En qué región de memoria se suelen mapear los dispositivos? ¿Qué implicaciones tiene para las instrucciones \texttt{lw} y \texttt{sw}?}
+
+\begin{itemize}
+    \item \textbf{Organización de la memoria en MMIO:} En un sistema con \textit{Memory-Mapped I/O} (E/S mapeada en memoria), no existe una división física entre el espacio de direcciones de la memoria principal (RAM) y los periféricos de entrada/salida. El mapa de direcciones unificado de 32 bits ($2^{32} = 4\text{ GB}$) asigna rangos específicos de direcciones a los registros internos (control, estado y datos) de los dispositivos de hardware.
+    
+    \item \textbf{Región de memoria habitual:}
+    \begin{itemize}
+        \item \textit{En hardware MIPS32 real:} Se mapean en la región superior conocida como \texttt{kseg1} (que va desde la dirección \texttt{0xA0000000} hasta \texttt{0xFFFFFFFF}). Esta región es no traducida por la MMU y **no utiliza memoria caché** (\textit{uncached}), asegurando que cada operación acceda físicamente al bus del periférico. Un estándar común para registros MMIO básicos en MIPS32 es la región a partir de \texttt{0xFFFF0000}.
+        \item \textit{En el simulador MARS:} Se emula asignando variables en el segmento de datos (\texttt{.data}, que inicia convencionalmente en \texttt{0x10010000}).
+    \end{itemize}
+    
+    \item \textbf{Implicaciones para las instrucciones \texttt{lw} y \texttt{sw}:}
+    \begin{enumerate}
+        \item **Sin instrucciones especiales:** No se requieren instrucciones propietarias para E/S; se emplean las mismas instrucciones de transferencia de memoria \texttt{lw} (Load Word) y \texttt{sw} (Store Word).
+        \item **Lecturas (\texttt{lw}):** Ejecutar un \texttt{lw} sobre una dirección mapeada lee el estado o dato actual capturado por el sensor/periférico en lugar de consultar una celda RAM.
+        \item **Escrituras (\texttt{sw}):** Ejecutar un \texttt{sw} sobre dicha dirección transmite una orden o configuración de control directamente hacia los circuitos del hardware.
+        \item **Efectos secundarios (\textit{Side Effects}):** A diferencia de la RAM, leer un registro mediante \texttt{lw} puede alterar el estado del periférico (por ejemplo, limpiar una bandera de interrupción automáticamente).
+    \end{enumerate}
+\end{itemize}
+
+\hr
+
+\subsection*{Pregunta 2}
+\textbf{2. ¿Cuál es la principal diferencia entre \textit{memory-mapped I/O} y la entrada/salida por puertos? ¿Qué ventajas y desventajas tiene cada enfoque? ¿Por qué MIPS32 utiliza principalmente \textit{memory-mapped I/O}?}
+
+\begin{itemize}
+    \item \textbf{Diferencia principal:} MMIO utiliza un único espacio de direcciones compartido entre la memoria RAM y los dispositivos E/S (accedidos con el mismo bus). En cambio, la E/S por puertos (\textit{Port-Mapped I/O} o PMIO) posee un espacio de direccionamiento totalmente independiente y exclusivo para los periféricos, controlado mediante líneas físicas adicionales en el bus ($\overline{\text{IOR}}$ y $\overline{\text{IOW}}$).
+    
+    \item \textbf{Ventajas y Desventajas de cada enfoque:}
+\end{itemize}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{p{2.8cm} p{6.2cm} p{6.2cm}}
+\toprule
+\textbf{Enfoque} & \textbf{Ventajas} & \textbf{Desventajas} \\
+\midrule
+\textbf{Memory-Mapped I/O (MMIO)} 
+& 1. Simplifica la arquitectura al no requerir instrucciones especiales de E/S.\newline
+  2. Permite usar todos los modos de direccionamiento de la CPU sobre los registros de E/S.\newline
+  3. Facilita la protección mediante memoria virtual.
+& 1. Consume direcciones del mapa global de memoria RAM.\newline
+  2. La lógica de decodificación de direcciones debe ser más compleja (direcciones de 32 bits).\newline
+  3. Requiere deshabilitar caché en la región mapeada. \\
+\midrule
+\textbf{Port-Mapped I/O (PMIO)} 
+& 1. No reduce el espacio de direccionamiento asignable a la RAM.\newline
+  2. Utiliza direcciones de puerto más cortas (ej. 16 bits), lo que simplifica la decodificación.
+& 1. Requiere instrucciones especializadas de CPU (\texttt{IN}, \texttt{OUT}).\newline
+  2. Modos de direccionamiento limitados únicamente a transferencias directas/indirectas por puerto. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{¿Por qué MIPS32 utiliza principalmente MMIO?}
+    MIPS32 es una arquitectura RISC basada en los principios de **ortogonalidad y simplificación del conjunto de instrucciones (ISA)**. Al optar por MMIO, los diseñadores evitan agregar opcodes y hardware dedicado para la E/S en la Unidad de Control, manteniendo la tubería (\textit{pipeline}) limpia de 5 etapas y reutilizando la infraestructura existente del modelo de carga y almacenamiento (\textit{Load/Store}).
+\end{itemize}
+
+\hr
+
+\subsection*{Pregunta 3}
+\textbf{3. En un sistema con \textit{memory-mapped I/O}: ¿Qué problemas pueden surgir si dos dispositivos usan direcciones solapadas? ¿Cómo se evita este conflicto?}
+
+\begin{itemize}
+    \item \textbf{Problemas derivados del solapamiento:}
+    Si dos dispositivos comparten la misma dirección de memoria dentro del mapa de E/S, surge una **contención en el bus (\textit{Bus Contention})**:
+    \begin{enumerate}
+        \item **Corrupción de datos:** Al intentar leer dicha dirección, ambos dispositivos intentarán colocar simultáneamente sus señales en las líneas del bus de datos, produciendo un valor lógico corrupto o indeterminado.
+        \item **Daño físico al hardware:** Si un periférico intenta colocar un nivel alto ($1$ lógico / $V_{CC}$) y el otro un nivel bajo ($0$ lógico / GND) en la misma línea de bus, se genera un cortocircuito que provoca un sobrecalentamiento y daño permanente en los transistores de salida de los circuitos integrados.
+    \end{enumerate}
+    
+    \item \textbf{Cómo se evita este conflicto:}
+    Se evita mediante una **decodificación de direcciones estricta (\textit{Address Decoding})**. Un circuito lógico decodificador toma los bits superiores del bus de direcciones enviado por la CPU y activa una línea de habilitación exclusiva llamada \textit{Chip Select} ($\overline{\text{CS}}$) o \textit{Chip Enable} ($\overline{\text{CE}}$) asignada a un único dispositivo a la vez, manteniendo las salidas de los demás dispositivos en estado de alta impedancia (\textit{High-Z}).
+\end{itemize}
+
+\hr
+
+\subsection*{Pregunta 4}
+\textbf{4. ¿Por qué se considera que el \textit{memory-mapped I/O} simplifica el diseño del conjunto de instrucciones de un procesador? ¿Qué tipo de instrucciones adicionales serían necesarias si se usara E/S por puertos?}
+
+\begin{itemize}
+    \item \textbf{Simplificación del diseño del ISA:} 
+    MMIO elimina la necesidad de contar con instrucciones de máquina dedicadas exclusivamente a operaciones de entrada y salida. Todas las lecturas y escrituras hacia los periféricos se realizan utilizando las mismas instrucciones estándar de transferencia de datos (\texttt{lw} y \texttt{sw}). Esto simplifica la Unidad de Decodificación de la CPU, reduce el número de transistores necesarios en el procesador y permite realizar modificaciones directas sobre los registros del periférico mediante instrucciones aritméticas y lógicas habituales (\texttt{and}, \texttt{or}, \texttt{ori}).
+    
+    \item \textbf{Instrucciones adicionales requeridas en PMIO:}
+    Si la arquitectura empleara E/S por puertos, la CPU necesitaría incorporar instrucciones de máquina especializadas en su ISA, como por ejemplo:
+    \begin{itemize}
+        \item \texttt{IN \$rt, puerto}: Transfiere el dato presente en un puerto de E/S hacia un registro interno de la CPU.
+        \item \texttt{OUT puerto, \$rs}: Envía el contenido de un registro interno hacia un puerto de E/S.
+        \item Instrucciones de cadena por bloques como \texttt{INS} (Input String) u \texttt{OUTS} (Output String) para transferencias masivas por puerto.
+    \end{itemize}
+\end{itemize}
+
+\hr
+
+\subsection*{Pregunta 5}
+\textbf{5. ¿Qué ocurre a nivel del bus de datos y direcciones cuando el procesador accede a una dirección de memoria que corresponde a un dispositivo? ¿Cómo sabe el hardware que debe acceder a un periférico en lugar de la RAM?}
+
+\begin{itemize}
+    \item \textbf{Ocurrencia a nivel de buses:}
+    \begin{enumerate}
+        \item La CPU coloca la dirección objetivo (ej. \texttt{0xFFFF0000}) en el **bus de direcciones** (de 32 bits).
+        \item La CPU activa las líneas correspondientes del **bus de control** indicando si es una operación de lectura ($\overline{\text{READ}}$) o escritura ($\overline{\text{WRITE}}$).
+        \item Durante una lectura, el periférico toma el control del **bus de datos** e impulsa los bits del registro solicitado. Durante una escritura, la CPU coloca el dato en el bus de datos y el periférico lo captura en sus pestillos internos.
+    \end{enumerate}
+    
+    \item \textbf{¿Cómo sabe el hardware que debe acceder a un periférico y no a la RAM?}
+    Esto lo determina el **Decodificador de Direcciones (\textit{Address Decoder})** integrado en la placa base o SoC:
+    \begin{itemize}
+        \item El decodificador analiza continuamente los bits más significativos (MSB) del bus de direcciones.
+        \item Si los bits pertenecen al rango de memoria asignado a la RAM, el decodificador activa la señal $\overline{\text{CS}}$ de los módulos RAM.
+        \item Si los bits coinciden con el rango reservado para E/S, el decodificador **desactiva la RAM** y activa la línea $\overline{\text{CS}}$ del controlador del periférico correspondiente.
+    \end{itemize}
+\end{itemize}
+
+\hr
+
+\subsection*{Pregunta 6}
+\textbf{6. ¿Es posible que un programa normal (sin privilegios) acceda a un dispositivo mapeado en memoria? ¿Qué mecanismos de protección existen para evitar accesos no autorizados?}
+
+\begin{itemize}
+    \item \textbf{¿Es posible el acceso directo?} **No.** En sistemas operativos modernos con soporte multitarea y protección de memoria, los programas que se ejecutan en modo usuario (\textit{User Mode}) tienen prohibido acceder directamente a las direcciones físicas mapeadas a los dispositivos E/S.
+    
+    \item \textbf{Mecanismos de protección existentes:}
+    \begin{enumerate}
+        \item **Modos de Operación de la CPU:** Separación por hardware entre *Modo Usuario* (privilegios restringidos) y *Modo Kernel/Supervisor* (privilegios totales).
+        \item **Memoria Virtual y MMU:** La Unidad de Gestión de Memoria (MMU) gestiona las tablas de páginas. Las páginas donde se encuentran las direcciones de MMIO se marcan con permisos exclusivos para Modo Kernel. Si un programa sin privilegios intenta acceder mediante \texttt{lw} o \texttt{sw}, la MMU genera una excepción de **Violación de Acceso / Fallo de Protección**.
+        \item **Controladores de Dispositivos (\textit{Drivers}) y \texttt{syscall}:** Para comunicarse con el hardware, el programa usuario debe solicitar el servicio al sistema operativo mediante una llamada al sistema (\texttt{syscall}). El Kernel valida los permisos del proceso y ejecuta la operación sobre el hardware de forma segura.
+    \end{enumerate}
+\end{itemize}
+
+\hr
+
+\subsection*{Pregunta 7}
+\textbf{7. ¿Qué técnicas se pueden emplear para evitar esperas activas innecesarias al interactuar con dispositivos?}
+
+La espera activa (\textit{Polling}) mantiene a la CPU ejecutando un bucle continuo comprobando el estado de un registro, lo cual desperdicia tiempo de procesamiento y energía. Para evitarlo se utilizan:
+
+\begin{enumerate}
+    \item **Entrada/Salida Dirigida por Interrupciones (\textit{Interrupt-Driven I/O}):** La CPU inicia la orden en el dispositivo y continúa ejecutando otros programas. Cuando el dispositivo finaliza su tarea o recibe datos, envía una señal física de interrupción (\textit{IRQ}) a la CPU. La CPU pausa temporalmente la tarea actual, ejecuta la Rutina de Servicio de Interrupción (\textit{ISR}) correspondiente y reanuda el programa.
+    \item **Acceso Directo a Memoria (\textit{DMA - Direct Memory Access}):** Se utiliza un controlador hardware de DMA que se encarga de transferir bloques de datos directamente entre el periférico y la RAM sin pasar por la CPU. La CPU solo configura la transferencia al inicio y recibe una interrupción cuando el bloque se ha transferido completamente.
+    \item **Sincronización por Sistema Operativo:** El uso de mecanismos de desatasco como semáforos, colas de mensajes y estados de procesos (poner el hilo en estado *Bloqueado* o *En Espera* hasta que el evento de E/S despierte al proceso).
+\end{enumerate}
+
+\newpage
+
+% =====================================================================
+% ANÁLISIS Y DISCUSIÓN DE RESULTADOS
+% =====================================================================
+\section{Análisis y Discusión de los Resultados}
+
+En la práctica de laboratorio se implementaron y probaron exitosamente dos controladores en lenguaje ensamblador MIPS32 mediante el simulador MARS, cubriendo el esquema de Entrada/Salida Mapeada en Memoria (MMIO) e interacción por espera activa (\textit{Polling}).
+
+\subsection{Ejercicio 1: Sensor de Luminosidad}
+Se desarrollaron e implementaron los procedimientos \texttt{InicializarSensorLuz} y \texttt{LeerLuminosidad}.
+\begin{itemize}
+    \item La inicialización envió correctamente el valor \texttt{0x1} al registro \texttt{LuzControl} usando la instrucción \texttt{sw}, entrando posteriormente en un bucle de comprobación del registro \texttt{LuzEstado}.
+    \item La función de lectura evaluó el estado retornado: cuando el valor de estado fue \texttt{1}, leyó los datos desde \texttt{LuzDatos} retornando el valor de luminosidad en \texttt{\$v0} y el código de éxito \texttt{0} en \texttt{\$v1}.
+    \item Ante una condición simulada de error (\texttt{LuzEstado = -1}), la rutina bifurcó hacia el manejador de errores devolviendo un código de estado de error \texttt{-1} en \texttt{\$v1}.
+\end{itemize}
+
+\subsection{Ejercicio 2: Módulo de Tensión Arterial}
+El procedimiento \texttt{controlador\_tension} inició exitosamente la medición escribiendo el valor \texttt{1} en el registro \texttt{TensionControl}.
+\begin{itemize}
+    \item El programa ejecutó un bucle de espera activa con la instrucción \texttt{beqz \$t1, espera\_tension} sobre el registro \texttt{TensionEstado}.
+    \item Al cambiar el estado a \texttt{1} (medición finalizada), el programa extrajo los datos desde la memoria mapeada y los retornó simultáneamente en los registros de salida \texttt{\$v0} (Sistólica) y \texttt{\$v1} (Diastólica), respetando el estándar de convenciones de MIPS32.
+\end{itemize}
+
+\subsection{Validación en el Simulador MARS}
+Dado que el simulador MARS no posee sensores físicos externos conectados al bus, la prueba en vivo de los algoritmos de *polling* se realizó mediante la modificación interactiva del segmento de datos (\textit{Data Segment}) durante la ejecución paso a paso (\textit{Single-Step}). Modificar el valor del registro de estado en vivo de \texttt{0} a \texttt{1} permitió validar que las rutinas rompen el bucle de espera de manera precisa y continúan la secuencia de lectura propuesta.
+
+\newpage
+
+% =====================================================================
+% CONCLUSIONES
+% =====================================================================
+\section{Conclusiones}
+
+El desarrollo de esta práctica de laboratorio permitió profundizar en la arquitectura de Entrada/Salida Mapeada en Memoria (MMIO) sobre procesadores MIPS32. Se comprobó experimentalmente cómo el paradigma RISC simplifica la Unidad de Control al reutilizar las instrucciones de carga y almacenamiento (\texttt{lw} y \texttt{sw}) para la interacción con periféricos. Asimismo, se comprendió la dinámica fundamental del mecanismo de espera activa (\textit{Polling}) y la importancia de la decodificación de direcciones para evitar conflictos en el bus del sistema.
+
+\end{document}
